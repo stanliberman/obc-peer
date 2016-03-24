@@ -32,8 +32,7 @@ import (
 const (
 	ADMIN_PERMISSION_BIT = 1
 	TRANSACT_PERMISSION_BIT = 2
-	DESTROY_PERMISSION_BIT = 4
-	ISSUE_PERMISSION_BIT = 8
+	ISSUE_PERMISSION_BIT = 4
 )
 
 var log = logging.MustGetLogger("asset_manager")
@@ -44,6 +43,9 @@ type SimpleChaincode struct {
 }
 
 /*
+This function should additionally have a guard against multiple invocations, to prevent run-time addition
+of admin users.
+
 Args:
 	- initial admin user
 	- asset ID
@@ -82,9 +84,11 @@ func (t *SimpleChaincode) checkPermission(stub *shim.ChaincodeStub, user string,
 		return false, errors.New("Nil permissions for " + user)
 	}
 
-	permissionsMask,_ := strconv.Atoi(string(permBytes))
+	var permissionsMask int
+	permissionsMask,err = strconv.Atoi(string(permBytes))
+	log.Info("Retreived permission mask %d. Checking against %d", permissionsMask, permissionBit)
 
-	return (1 == permissionsMask & permissionBit), nil
+	return (permissionBit == permissionsMask & permissionBit), err
 }
 
 /*
