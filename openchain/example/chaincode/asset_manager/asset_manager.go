@@ -38,8 +38,16 @@ const (
 var log = logging.MustGetLogger("asset_manager")
 
 
-// SimpleChaincode example simple Chaincode implementation
-type SimpleChaincode struct {
+/*
+	AssetManagerChaincode example.
+
+Assumptions:
+	- Single asset per chaincode
+	- No metadata for transactions or asset
+	- OBC doesn't pass in the credentials of the requestor, so we pass in the user id as the first argument
+
+*/
+type AssetManagerChaincode struct {
 }
 
 /*
@@ -50,7 +58,7 @@ Args:
 	- initial admin user
 	- asset ID
 */
-func (t *SimpleChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+func (t *AssetManagerChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var err error
 
 	log.Info("Initializing")
@@ -59,7 +67,7 @@ func (t *SimpleChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte,
 		return nil, errors.New("Incorrect number of arguments. Expecting 2")
 	}
 
-	initialAdmin := args[0]
+	initialAdmin := "XX:" + args[0]
 
 	// TODO check this user doesn't yet exist or has different permissions
 	err = stub.PutState(initialAdmin, []byte(strconv.Itoa(ADMIN_PERMISSION_BIT | TRANSACT_PERMISSION_BIT)))
@@ -73,9 +81,9 @@ func (t *SimpleChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte,
 }
 
 // Helper function to check the pemissions against the database
-func (t *SimpleChaincode) checkPermission(stub *shim.ChaincodeStub, user string, permissionBit int) (bool, error) {
+func (t *AssetManagerChaincode) checkPermission(stub *shim.ChaincodeStub, user string, permissionBit int) (bool, error) {
 		
-	permBytes, err := stub.GetState(user)
+	permBytes, err := stub.GetState("XX:" + user)
 	if err != nil {
 		return false, errors.New("Failed to get permissions for " + user)
 	}
@@ -99,7 +107,7 @@ Admin function will only currently act to add a new user permissions. This shoul
 	- user to add
 	- permission mask
 */
-func (t *SimpleChaincode) admin(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+func (t *AssetManagerChaincode) admin(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args) != 3 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 3")
 	}
@@ -121,8 +129,24 @@ func (t *SimpleChaincode) admin(stub *shim.ChaincodeStub, args []string) ([]byte
 	}
 
 	user := args[1]
+	prefixedUser := "XX:" + user
+
+	permBytes, err := stub.GetState(prefixedUser)
+	if permBytes != nil {
+		log.Warning("User " + prefixedUser + " already exists");
+		return nil, err
+	}
+
 	log.Info(fmt.Sprintf("===> adding user:%s with permission mask of %d(%s)\n", user, permissions, args[2]))
-	err = stub.PutState(user, []byte(strconv.Itoa(int(permissions))))
+	permString := strconv.Itoa(int(permissions))
+	err = stub.PutState(prefixedUser, []byte(permString))
+	if err != nil {
+		log.Error("Failed to store " + permString + " for " + prefixedUser)
+		return nil, err
+	}
+
+	// Establish initial 0 balance
+	err = stub.PutState(user, []byte(strconv.Itoa(0)))
 
 	return nil, err
 }
@@ -132,7 +156,7 @@ Args:
 	- currentUser
 	- asset quantity
 */
-func (t *SimpleChaincode) issue(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+func (t *AssetManagerChaincode) issue(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args) != 2 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 2")
 	}
@@ -148,10 +172,28 @@ func (t *SimpleChaincode) issue(stub *shim.ChaincodeStub, args []string) ([]byte
 
 	log.Info("Issuing assets permitted")
 
-	assetQty,_ := strconv.ParseInt(args[1], 10, 10)
+	assetQty,err := strconv.Atoi(args[1])
+	if err != nil {
+		log.Error("Failed to parse issue amount: " + args[1])
+		return nil, err
+	}
+
+	// Get current balance
+	balBytes,err := stub.GetState(currentUser)
+	if err != nil {
+		log.Error("Failed to get current balance for " + currentUser)
+		return nil, err	
+	}
+	balance, err := strconv.Atoi(string(balBytes))
+	log.Info("Current balance for " + currentUser + " is " + string(balBytes))
 
 	log.Info(fmt.Sprintf("===> issuing %d to %s\n", assetQty, currentUser))
-	err = stub.PutState(currentUser, []byte(strconv.Itoa(int(assetQty))))
+	newAmt := strconv.Itoa(int(assetQty) + balance)
+	err = stub.PutState(currentUser, []byte(newAmt))
+	if err != nil {
+		log.Error("Failed to store new balance of " + newAmt)
+		return nil, err	
+	}
 
 	return nil, err
 }
@@ -162,7 +204,7 @@ Args:
 	- to user
 	- asset quantity to transfer
 */
-func (t *SimpleChaincode) transact(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+func (t *AssetManagerChaincode) transact(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args) != 3 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 3")
 	}
@@ -176,9 +218,45 @@ func (t *SimpleChaincode) transact(stub *shim.ChaincodeStub, args []string) ([]b
 		return nil, errors.New("User " + currentUser + " is not permissioned for TRANSACT action")
 	} 
 
-	log.Info("Transacting permitted")
+	log.Debug("Transacting permitted")
 
-	return nil, nil
+	// Check whether the recepient has TRANSACT permissions
+	user := args[1]
+	quantity,err := strconv.Atoi(args[2])
+	allowed,err = t.checkPermission(stub, user, TRANSACT_PERMISSION_BIT)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, errors.New("Recepient user " + user + " is not permissioned for TRANSACT action")
+	} 
+
+	// Check balance
+	balBytes, err := stub.GetState(currentUser)
+	if err != nil {
+		return nil, err	
+	}
+	balance, err := strconv.Atoi(string(balBytes))
+
+	if balance < quantity {
+		return nil, errors.New("Insufficient balance for " + currentUser +
+			". Available: " + string(balBytes) + "; requested: " + args[2])	
+	}
+
+	// Subtract from currentUser balance
+	err = stub.PutState(currentUser, []byte(strconv.Itoa(balance - quantity)))
+
+	// Get recepient balance
+	recvBalBytes, err := stub.GetState(user)
+	if err != nil {
+		return nil, errors.New("Failed to get balance for " + user)
+	}
+	oldBalance,_ := strconv.Atoi(string(recvBalBytes))
+
+	// Store new balance
+	err = stub.PutState(user, []byte(strconv.Itoa(oldBalance + quantity)))
+
+	return nil, err
 }
 
 /*
@@ -189,19 +267,45 @@ Args:
 	- currentUser
 	- asset quantity
 */
-func (t *SimpleChaincode) destroy(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+func (t *AssetManagerChaincode) destroy(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args) != 2 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 2")
 	}
 
-	log.Info("Destoying stuff")
+	currentUser := args[0]
+	allowed,err := t.checkPermission(stub, currentUser, ISSUE_PERMISSION_BIT)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, errors.New("User " + currentUser + " is not permissioned for ISSUE action")
+	} 
 
-	return nil, nil
+	log.Info("Destroying permitted")
+
+	// Check balance
+	balBytes, err := stub.GetState(currentUser)
+	if err != nil {
+		return nil, err	
+	}
+	balance, err := strconv.Atoi(string(balBytes))
+
+	quantity,err := strconv.Atoi(args[1])
+	if balance < quantity {
+		return nil, errors.New("Insufficient balance for " + currentUser +
+			". Available: " + string(balBytes) + "; requested: " + args[2])	
+	}
+
+	log.Info("Destroying " + args[1] + " of " + string(balBytes) + " for " + currentUser)
+
+	err = stub.PutState(currentUser, []byte(strconv.Itoa(balance - quantity)))
+
+	return nil, err
 }
 
 // Run callback representing the invocation of a chaincode
 // This chaincode will manage two accounts A and B and will transfer X units from A to B upon invoke
-func (t *SimpleChaincode) Run(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+func (t *AssetManagerChaincode) Run(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 
 	log.Info("Received command: " + function)
 
@@ -222,7 +326,7 @@ func (t *SimpleChaincode) Run(stub *shim.ChaincodeStub, function string, args []
 }
 
 // Query callback representing the query of a chaincode
-func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+func (t *AssetManagerChaincode) Query(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 	if function != "query" {
 		return nil, errors.New("Invalid query function name. Expecting \"query\"")
 	}
@@ -254,7 +358,7 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
 
 func main() {
 
-	err := shim.Start(new(SimpleChaincode))
+	err := shim.Start(new(AssetManagerChaincode))
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
