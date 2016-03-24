@@ -24,7 +24,6 @@ import (
 
 	"github.com/hyperledger-incubator/obc-peer/examples/chaincode/go/utxo/util"
 	"github.com/hyperledger-incubator/obc-peer/openchain/chaincode/shim"
-	"github.com/golang/protobuf/proto"
 )
 
 // The UTXO example chaincode contains a single invocation function named execute. This function accepts BASE64
@@ -100,11 +99,7 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
 			var data []byte
 			return data, nil
 		}
-		data, err := proto.Marshal(tx)
-		if err != nil {
-			return nil, fmt.Errorf("Error marshalling transaction to bytes:  %s", err)
-		}
-		return data, nil
+		return tx, nil
 
 	default:
 		return nil, errors.New("Unsupported operation")
