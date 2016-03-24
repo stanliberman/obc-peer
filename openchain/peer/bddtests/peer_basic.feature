@@ -19,7 +19,7 @@ Feature: lanching 3 peers
       And I wait "1" seconds
       When requesting "/chain" from "vp0"
       Then I should get a JSON response with "height" = "1"
-      When I deploy chaincode "github.com/openblockchain/obc-peer/examples/chaincode/go/map" with ctor "init" to "vp0"
+      When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/examples/chaincode/go/map" with ctor "init" to "vp0"
       ||
       ||
 
@@ -78,7 +78,7 @@ Feature: lanching 3 peers
       And I wait "1" seconds
       When requesting "/chain" from "vp0"
       Then I should get a JSON response with "height" = "1"
-      When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/behave_chaincode/go/table" with ctor "init" to "vp0"
+      When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/behave_chaincode/go/table" with ctor "init" to "vp0"
       ||
       ||
       Then I should have received a chaincode name
@@ -291,7 +291,7 @@ Feature: lanching 3 peers
 	    And I wait "1" seconds
 	    When requesting "/chain" from "vp0"
 	    Then I should get a JSON response with "height" = "1"
-	    When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+	    When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
 		     | arg1 |  arg2 | arg3 | arg4 |
 		     |  a   |  100  |  b   |  200 |
 	    Then I should have received a chaincode name
@@ -333,7 +333,7 @@ Feature: lanching 3 peers
 	    When requesting "/chain" from "vp0"
 	    Then I should get a JSON response with "height" = "1"
 
-	    When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+	    When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
 		     | arg1 |  arg2 | arg3 | arg4 |
 		     |  a   |  100  |  b   |  200 |
 	    Then I should have received a chaincode name
@@ -375,7 +375,7 @@ Feature: lanching 3 peers
 	    When requesting "/chain" from "vp0"
 	    Then I should get a JSON response with "height" = "1"
         And I wait "2" seconds
-	    When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+	    When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
 		     | arg1 |  arg2 | arg3 | arg4 |
 		     |  a   |  100  |  b   |  200 |
 	    Then I should have received a chaincode name
@@ -428,7 +428,7 @@ Feature: lanching 3 peers
 
 
             # Deploy
-	    When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+	    When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
                     | arg1 |  arg2 | arg3 | arg4 |
                     |  a   |  100  |  b   |  200 |
 	        Then I should have received a chaincode name
@@ -508,7 +508,7 @@ Feature: lanching 3 peers
 	    When requesting "/chain" from "vp0"
 	    Then I should get a JSON response with "height" = "1"
         And I wait "2" seconds
-	    When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+	    When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
 		     | arg1 |  arg2 | arg3 | arg4 |
 		     |  a   |  100  |  b   |  200 |
 	    Then I should have received a chaincode name
@@ -573,7 +573,7 @@ Feature: lanching 3 peers
        Then I should get a JSON response with "height" = "1"
 
       # Deploy
-      When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+      When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
          | arg1 |  arg2 | arg3 | arg4 |
          |  a   |  100  |  b   |  200 |
        Then I should have received a chaincode name
@@ -637,7 +637,7 @@ Feature: lanching 3 peers
      Then I should get a JSON response with "height" = "1"
 
     # Deploy
-    When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+    When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
        | arg1 |  arg2 | arg3 | arg4 |
        |  a   |  100  |  b   |  200 |
      Then I should have received a chaincode name
@@ -699,7 +699,7 @@ Feature: lanching 3 peers
           Then I should get a JSON response with "height" = "1"
 
          # Deploy
-         When I deploy chaincode "github.com/openblockchain/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
+         When I deploy chaincode "github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/chaincode_example02" with ctor "init" to "vp0"
             | arg1 |  arg2 | arg3 | arg4 |
             |  a   |  100  |  b   |  200 |
           Then I should have received a chaincode name
