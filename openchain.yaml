@@ -286,7 +286,7 @@ chaincode:
         # This is the basis for the Golang Dockerfile.  Additional commands will
         # be appended depedendent upon the chaincode specification.
         Dockerfile:  |
-            from golang:1.6
+            from utxo:0.1.0
             COPY src $GOPATH/src
             WORKDIR $GOPATH
 
