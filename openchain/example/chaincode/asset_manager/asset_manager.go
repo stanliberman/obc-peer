@@ -40,12 +40,6 @@ var log = logging.MustGetLogger("asset_manager")
 
 /*
 	AssetManagerChaincode example.
-
-Assumptions:
-	- Single asset per chaincode
-	- No metadata for transactions or asset
-	- OBC doesn't pass in the credentials of the requestor, so we pass in the user id as the first argument
-
 */
 type AssetManagerChaincode struct {
 }
@@ -80,20 +74,31 @@ func (t *AssetManagerChaincode) init(stub *shim.ChaincodeStub, args []string) ([
 	return nil, err
 }
 
-// Helper function to check the pemissions against the database
-func (t *AssetManagerChaincode) checkPermission(stub *shim.ChaincodeStub, user string, permissionBit int) (bool, error) {
-		
+func (t *AssetManagerChaincode) getPermissions(stub *shim.ChaincodeStub, user string) (int, error) {
 	permBytes, err := stub.GetState("XX:" + user)
 	if err != nil {
-		return false, errors.New("Failed to get permissions for " + user)
+		return 0, errors.New("Failed to get permissions for " + user)
 	}
 
 	if permBytes == nil {
-		return false, errors.New("Nil permissions for " + user)
+		return 0, errors.New("Nil permissions for " + user)
 	}
 
 	var permissionsMask int
 	permissionsMask,err = strconv.Atoi(string(permBytes))
+	log.Info("Retrieved permission mask %d", permissionsMask)
+
+	if err != nil {
+		return 0, errors.New("Failed to interpret permissions mask: " + strconv.Itoa(permissionsMask))
+	}
+
+	return permissionsMask, nil
+}
+
+// Helper function to check the pemissions against the database
+func (t *AssetManagerChaincode) checkPermission(stub *shim.ChaincodeStub, user string, permissionBit int) (bool, error) {
+		
+	permissionsMask, err := t.getPermissions(stub, user)
 	log.Info("Retreived permission mask %d. Checking against %d", permissionsMask, permissionBit)
 
 	return (permissionBit == permissionsMask & permissionBit), err
@@ -192,7 +197,6 @@ func (t *AssetManagerChaincode) issue(stub *shim.ChaincodeStub, args []string) (
 	err = stub.PutState(currentUser, []byte(newAmt))
 	if err != nil {
 		log.Error("Failed to store new balance of " + newAmt)
-		return nil, err	
 	}
 
 	return nil, err
@@ -327,39 +331,45 @@ func (t *AssetManagerChaincode) Run(stub *shim.ChaincodeStub, function string, a
 
 // Query callback representing the query of a chaincode
 func (t *AssetManagerChaincode) Query(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
-	if function != "query" {
-		return nil, errors.New("Invalid query function name. Expecting \"query\"")
-	}
-	var A string // Entities
-	var err error
 
 	if len(args) != 1 {
-		return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
+		return nil, errors.New("Incorrect number of arguments. Expecting user name to query")
 	}
 
-	A = args[0]
+	user := args[0]
 
-	// Get the state from the ledger
-	Avalbytes, err := stub.GetState(A)
-	if err != nil {
-		jsonResp := "{\"Error\":\"Failed to get state for " + A + "\"}"
-		return nil, errors.New(jsonResp)
+	if function == "permissions" {
+		permissionsMask, err := t.getPermissions(stub, user)
+		fmt.Printf("Query Response: user: %s, permissions: %d\n", user, permissionsMask)
+		return []byte(strconv.Itoa(permissionsMask)), err
+	} else if function == "balance" {
+		var err error
+
+		// Get the state from the ledger
+		balbytes, err := stub.GetState(user)
+		if err != nil {
+			return nil, errors.New("Failed to get state for " + user)
+		}
+
+		if balbytes == nil {
+			return nil, errors.New("Nil amount for " + user)
+		}
+
+		bytes,err := stub.GetState("ASSET_ID")
+		fmt.Printf("Asset ID: %d\n", string(bytes))
+		fmt.Printf("Query Response: user: %s, permissions: %d\n", user, balbytes)
+		return balbytes, nil
+	} else {
+		return nil, errors.New("Invalid query function name: " + function)
 	}
 
-	if Avalbytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + A + "\"}"
-		return nil, errors.New(jsonResp)
-	}
-
-	jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
-	fmt.Printf("Query Response:%s\n", jsonResp)
-	return Avalbytes, nil
+	return nil, nil
 }
 
 func main() {
 
 	err := shim.Start(new(AssetManagerChaincode))
 	if err != nil {
-		fmt.Printf("Error starting Simple chaincode: %s", err)
+		fmt.Printf("Error starting AssetManager chaincode: %s", err)
 	}
 }

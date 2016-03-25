@@ -10,9 +10,9 @@ CCN=`cat asset_manager.cc`
 
 echo "Current chaincode is $CCN"
 
-./obc-peer chaincode query -n $CCN -c '{"Function": "query", "Args": ["XX:user1"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "query", "Args": ["XX:admin_user"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "query", "Args": ["XX:issuer_user"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "query", "Args": ["user1"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "query", "Args": ["issuer_user"]}'
+./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["user1"]}'
+./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["admin_user"]}'
+./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["issuer_user"]}'
+./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["user1"]}'
+./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["issuer_user"]}'
 
