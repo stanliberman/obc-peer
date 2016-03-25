@@ -123,12 +123,9 @@ func (t *AssetManagerChaincode) admin(stub *shim.ChaincodeStub, args []string) (
 		return nil, errors.New("User " + currentUser + " is not permissioned for ADMIN action")
 	} 
 
-	log.Info("Admin stuff permitted")
+	log.Info("Admin action permitted")
 
 	permissions,err := strconv.ParseInt(args[2], 2, 10)
-	if err != nil {
-		return nil, err
-	}
 	if err != nil {
 		return nil, errors.New("Failed to parse permissions mask: " + args[2])
 	}
@@ -340,25 +337,36 @@ func (t *AssetManagerChaincode) Query(stub *shim.ChaincodeStub, function string,
 
 	if function == "permissions" {
 		permissionsMask, err := t.getPermissions(stub, user)
-		fmt.Printf("Query Response: user: %s, permissions: %d\n", user, permissionsMask)
-		return []byte(strconv.Itoa(permissionsMask)), err
+		if err != nil {
+			return []byte("No permissions established for " + user), nil
+		}
+
+		log.Info(fmt.Sprintf("Permissions query response: user: %s, permissions: %d\n", user, permissionsMask))
+		return []byte(strconv.Itoa(permissionsMask)), nil
 	} else if function == "balance" {
 		var err error
 
 		// Get the state from the ledger
 		balbytes, err := stub.GetState(user)
 		if err != nil {
-			return nil, errors.New("Failed to get state for " + user)
+			return nil, errors.New("Failed to get balance state for " + user)
 		}
 
 		if balbytes == nil {
-			return nil, errors.New("Nil amount for " + user)
-		}
+			return []byte("No balance established for " + user), nil
+		} else {
+			bytes,err := stub.GetState("ASSET_ID")
+			if err != nil {
+				log.Error("ASSET_ID key is not present in state DB")
+				return nil, errors.New("Unknown asset chaincode?!")		
+			}
 
-		bytes,err := stub.GetState("ASSET_ID")
-		fmt.Printf("Asset ID: %d\n", string(bytes))
-		fmt.Printf("Query Response: user: %s, permissions: %d\n", user, balbytes)
-		return balbytes, nil
+			json:= fmt.Sprintf("{\"asset\":\"%s\", \"user\":\"%s\", \"balance\":\"%s\"}", string(bytes), user, string(balbytes))
+
+			log.Info("Returning: " + json);
+			
+			return []byte(json), nil
+		}
 	} else {
 		return nil, errors.New("Invalid query function name: " + function)
 	}
@@ -367,7 +375,7 @@ func (t *AssetManagerChaincode) Query(stub *shim.ChaincodeStub, function string,
 }
 
 func main() {
-
+	logging.SetLevel(logging.INFO, "")
 	err := shim.Start(new(AssetManagerChaincode))
 	if err != nil {
 		fmt.Printf("Error starting AssetManager chaincode: %s", err)

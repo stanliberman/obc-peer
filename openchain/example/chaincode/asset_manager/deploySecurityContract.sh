@@ -34,8 +34,7 @@ securityName=$3
 devMode=$4
 
 registryNameFile=registry.address
-deployMode="-p"
-deployName=$chainCodePath
+
 pid=-1
 
 if [[ ! -e $registryNameFile ]]; then
@@ -65,26 +64,32 @@ if [[ $devMode -eq 1 ]]; then
 	go build
 	OPENCHAIN_CHAINCODE_ID_NAME=$securityName $fileName &
 	pid=$!
-	deployMode="-n"
-	deployName=$securityName
+	deployMode="-n $securityName"
+else
+	deployMode="-p $chainCodePath"
 fi
 
 #Deploy the chaincode
 cd $GOPATH/src/github.com/hyperledger-incubator/obc-peer
 echo "Deploying contract $securityName with constructor init..."
+
 constructorJSON="{\"Function\":\"init\", \"Args\": [\"$chainCodeUser\", \"$securityName\"]}"
 echo "Constructor args: $constructorJSON"
-./obc-peer chaincode deploy -u $chainCodeUser $deployMode $deployName --ctor="$constructorJSON" > $directoryName/$securityName
-chainCodeAddress=$(cat $directoryName/$securityName)
-rm $directoryName/$securityName
+
+chainCodeAddress=`./obc-peer chaincode deploy -u $chainCodeUser $deployMode --ctor="$constructorJSON"`
+echo "Deployed chaincode with name: $chainCodeAddress"
 
 if [[ $registryName -ne "" ]]; then
 	#Capture the contract hash and register it in the asset registry
-	echo "Contract name: $chainCodeAddress"
+	echo "Registering Contract name $securityName as $chainCodeAddress"
 	invokeConstructor='{"Function": "register", "Args": ["'$securityName'", "'$chainCodeAddress'"]}'
 	./obc-peer chaincode invoke -u $chainCodeUser -n $registryName -c "$invokeConstructor"
+else
+	# In the absence of the registry store the generated chaincode name into a local file
+	echo $chainCodeAddress > $directoryName/$securityName
 fi
 
+# TBD I don't think we should kill this, since it provides the execution environment for the chaincode in Dev mode
 if [[ $devMode -eq 1 ]]; then
 	#kill the local chain code that we started earlier if it is still running
 	if [[ $pid -eq 0 ]] &&  ps -p $pid > /dev/null ;
