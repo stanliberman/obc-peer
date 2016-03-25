@@ -11,7 +11,7 @@ cd $GOPATH/src/github.com/hyperledger-incubator/obc-peer
 
 if [[ $1 != "nodeploy" ]]; then
 CHAINCODE_NAME=`./obc-peer chaincode deploy -p github.com/hyperledger-incubator/obc-peer/openchain/example/chaincode/asset_manager \
-	-c '{"Function":"init", "Args": ["$ADMIN", "HLP"]}'`
+	-c '{"Function":"init", "Args": ["$ADMIN", "$TICKER"]}'`
 
 echo $CHAINCODE_NAME > asset_manager.cc
 
