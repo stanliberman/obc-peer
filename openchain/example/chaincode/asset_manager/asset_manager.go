@@ -52,6 +52,11 @@ Args:
 	- initial admin user
 	- asset ID
 */
+func (t *AssetManagerChaincode) Init(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	log.Info("This is constructor")
+	return t.init(stub, args)
+}
+
 func (t *AssetManagerChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var err error
 
@@ -97,7 +102,7 @@ func (t *AssetManagerChaincode) getPermissions(stub *shim.ChaincodeStub, user st
 
 // Helper function to check the pemissions against the database
 func (t *AssetManagerChaincode) checkPermission(stub *shim.ChaincodeStub, user string, permissionBit int) (bool, error) {
-		
+
 	permissionsMask, err := t.getPermissions(stub, user)
 	log.Info("Retreived permission mask %d. Checking against %d", permissionsMask, permissionBit)
 
@@ -121,7 +126,7 @@ func (t *AssetManagerChaincode) admin(stub *shim.ChaincodeStub, args []string) (
 	allowed,_ := t.checkPermission(stub, currentUser, ADMIN_PERMISSION_BIT)
 	if !allowed {
 		return nil, errors.New("User " + currentUser + " is not permissioned for ADMIN action")
-	} 
+	}
 
 	log.Info("Admin action permitted")
 
@@ -170,7 +175,7 @@ func (t *AssetManagerChaincode) issue(stub *shim.ChaincodeStub, args []string) (
 	}
 	if !allowed {
 		return nil, errors.New("User " + currentUser + " is not permissioned for ISSUE action")
-	} 
+	}
 
 	log.Info("Issuing assets permitted")
 
@@ -184,7 +189,7 @@ func (t *AssetManagerChaincode) issue(stub *shim.ChaincodeStub, args []string) (
 	balBytes,err := stub.GetState(currentUser)
 	if err != nil {
 		log.Error("Failed to get current balance for " + currentUser)
-		return nil, err	
+		return nil, err
 	}
 	balance, err := strconv.Atoi(string(balBytes))
 	log.Info("Current balance for " + currentUser + " is " + string(balBytes))
@@ -217,7 +222,7 @@ func (t *AssetManagerChaincode) transact(stub *shim.ChaincodeStub, args []string
 	}
 	if !allowed {
 		return nil, errors.New("User " + currentUser + " is not permissioned for TRANSACT action")
-	} 
+	}
 
 	log.Debug("Transacting permitted")
 
@@ -230,18 +235,18 @@ func (t *AssetManagerChaincode) transact(stub *shim.ChaincodeStub, args []string
 	}
 	if !allowed {
 		return nil, errors.New("Recepient user " + user + " is not permissioned for TRANSACT action")
-	} 
+	}
 
 	// Check balance
 	balBytes, err := stub.GetState(currentUser)
 	if err != nil {
-		return nil, err	
+		return nil, err
 	}
 	balance, err := strconv.Atoi(string(balBytes))
 
 	if balance < quantity {
 		return nil, errors.New("Insufficient balance for " + currentUser +
-			". Available: " + string(balBytes) + "; requested: " + args[2])	
+			". Available: " + string(balBytes) + "; requested: " + args[2])
 	}
 
 	// Subtract from currentUser balance
@@ -280,21 +285,21 @@ func (t *AssetManagerChaincode) destroy(stub *shim.ChaincodeStub, args []string)
 	}
 	if !allowed {
 		return nil, errors.New("User " + currentUser + " is not permissioned for ISSUE action")
-	} 
+	}
 
 	log.Info("Destroying permitted")
 
 	// Check balance
 	balBytes, err := stub.GetState(currentUser)
 	if err != nil {
-		return nil, err	
+		return nil, err
 	}
 	balance, err := strconv.Atoi(string(balBytes))
 
 	quantity,err := strconv.Atoi(args[1])
 	if balance < quantity {
 		return nil, errors.New("Insufficient balance for " + currentUser +
-			". Available: " + string(balBytes) + "; requested: " + args[2])	
+			". Available: " + string(balBytes) + "; requested: " + args[2])
 	}
 
 	log.Info("Destroying " + args[1] + " of " + string(balBytes) + " for " + currentUser)
@@ -358,13 +363,13 @@ func (t *AssetManagerChaincode) Query(stub *shim.ChaincodeStub, function string,
 			bytes,err := stub.GetState("ASSET_ID")
 			if err != nil {
 				log.Error("ASSET_ID key is not present in state DB")
-				return nil, errors.New("Unknown asset chaincode?!")		
+				return nil, errors.New("Unknown asset chaincode?!")
 			}
 
 			json:= fmt.Sprintf("{\"asset\":\"%s\", \"user\":\"%s\", \"balance\":\"%s\"}", string(bytes), user, string(balbytes))
 
 			log.Info("Returning: " + json);
-			
+
 			return []byte(json), nil
 		}
 	} else {

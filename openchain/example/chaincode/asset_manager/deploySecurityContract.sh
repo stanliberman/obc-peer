@@ -34,6 +34,8 @@ securityName=$3
 devMode=$4
 
 registryNameFile=registry.address
+directoryName=$GOPATH/src/$chainCodePath
+deployLogFile=$directoryName/$securityName.err
 
 pid=-1
 
@@ -46,22 +48,31 @@ fi
 #Login to the local OBC peer
 echo "Logging in $chainCodeUser..."
 cd $GOPATH/src/github.com/hyperledger-incubator/obc-peer
-./obc-peer login $chainCodeUser
+./obc-peer login $chainCodeUser 2>>$deployLogFile
 
 OPENCHAIN_PEER_ADDRESS=$HOST:$PORT
 export OPENCHAIN_PEER_ADDRESS
 
-directoryName=$GOPATH/src/$chainCodePath
+chaincode=`basename $directoryName`
+
 if [[ $devMode -eq 1 ]]; then
 	#Register the chaincode and put the process in the background
 	#This is only really needed if running the OBC peer in dev mode
 	fileExtension=".go"
 	fileName=`ls $directoryName/*.go`
 	fileName=${fileName%$fileExtension}
-	echo "Move to $directoryName..."
+
+	echo "Moving to $directoryName..."
 	cd $directoryName
-	echo "Building GO file $fileName..."
-	go build
+
+	echo "Building chaincode $chaincode..."
+	go build 2>&1 >>$deployLogFile
+	if [[ ! -e $fileName ]]; then
+		echo ERROR Building chaincode binary... Check log file
+		exit -1
+	fi
+
+	# Prevent duplicate instances
 	pidFile=$directoryName/$securityName.pid
 	if [[ -e $pidFile ]]; then
 		oldPid=`cat $pidFile`
@@ -72,6 +83,7 @@ if [[ $devMode -eq 1 ]]; then
 			echo "$oldPid is not running"
 		fi
 	fi
+
 	OPENCHAIN_CHAINCODE_ID_NAME=$securityName nohup $fileName >$directoryName/$securityName.log 2>&1 &
 	pid=$!
 	echo $pid > $directoryName/$securityName.pid
@@ -88,8 +100,14 @@ echo "Deploying contract $securityName with constructor init..."
 constructorJSON="{\"Function\":\"init\", \"Args\": [\"$chainCodeUser\", \"$securityName\"]}"
 echo "Constructor args: $constructorJSON"
 
-chainCodeAddress=`./obc-peer chaincode deploy -u $chainCodeUser $deployMode --ctor="$constructorJSON"`
-echo "Deployed chaincode with name: $chainCodeAddress"
+chainCodeAddress=`./obc-peer chaincode deploy -u $chainCodeUser $deployMode --ctor="$constructorJSON" 2>&1 >>$deployLogFile`
+if [[ $devMode -eq 1 ]]; then
+	echo "Deployed chaincode in dev mode"
+	chainCodeAddress=$securityName
+	echo $chainCodeAddress >> $deployLogFile
+else
+	echo "Deployed chaincode with name: $chainCodeAddress"
+fi
 
 if [[ $registryName -ne "" ]]; then
 	#Capture the contract hash and register it in the asset registry

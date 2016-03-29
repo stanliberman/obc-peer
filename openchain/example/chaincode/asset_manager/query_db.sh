@@ -15,11 +15,22 @@ echo "Current chaincode is $CCN"
 
 cd $GOPATH/src/github.com/hyperledger-incubator/obc-peer
 
-echo ./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["stan"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["stan"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["user1"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["admin_user"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["issuer_user"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["user1"]}'
-./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["issuer_user"]}'
+logFile=query.err
 
+echo ./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["stan"]}'
+./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["stan"]}' 2>$logFile
+
+echo ./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["user1"]}' 2>$logFile
+./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["user1"]}' 2>$logFile
+
+echo ./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["admin_user"]}' 2>$logFile
+./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["admin_user"]}' 2>$logFile
+
+echo ./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["issuer_user"]}' 2>$logFile
+./obc-peer chaincode query -n $CCN -c '{"Function": "permissions", "Args": ["issuer_user"]}' 2>$logFile
+
+echo ./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["user1"]}' 2>$logFile
+./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["user1"]}' 2>$logFile
+
+echo ./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["issuer_user"]}' 2>$logFile
+./obc-peer chaincode query -n $CCN -c '{"Function": "balance", "Args": ["issuer_user"]}' 2>$logFile
