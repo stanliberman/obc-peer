@@ -18,13 +18,13 @@ echo "--> Deploy asset contract... "
 #input arguments
 #	username
 #	directory containing chaincode source
-#	security identifier	
+#	security identifier
 #	dev mode (1=YES, 0=NO)
 #EXAMPLE:
 #	./deploySecurityContract.sh chrisP github.com/openblockchain/obc-peer/openchain/example/chaincode/simpleFinancialSecurity/ "IBM" 1
 
 
-HOST=0.0.0.0
+HOST=127.0.0.1
 PORT=30303
 
 #Incoming args
@@ -46,7 +46,7 @@ fi
 #Login to the local OBC peer
 echo "Logging in $chainCodeUser..."
 cd $GOPATH/src/github.com/hyperledger-incubator/obc-peer
-./obc-peer login $chainCodeUser 
+./obc-peer login $chainCodeUser
 
 OPENCHAIN_PEER_ADDRESS=$HOST:$PORT
 export OPENCHAIN_PEER_ADDRESS
@@ -56,14 +56,26 @@ if [[ $devMode -eq 1 ]]; then
 	#Register the chaincode and put the process in the background
 	#This is only really needed if running the OBC peer in dev mode
 	fileExtension=".go"
-	fileName=`ls $directoryName/*.go`	
+	fileName=`ls $directoryName/*.go`
 	fileName=${fileName%$fileExtension}
 	echo "Move to $directoryName..."
 	cd $directoryName
 	echo "Building GO file $fileName..."
 	go build
-	OPENCHAIN_CHAINCODE_ID_NAME=$securityName $fileName &
+	pidFile=$directoryName/$securityName.pid
+	if [[ -e $pidFile ]]; then
+		oldPid=`cat $pidFile`
+		echo "Existing process running chaincode found at $oldPid. Killing..."
+		if kill -0 $oldPid 2>/dev/null; then
+			kill $oldPid 2>&1 >/dev/null
+		else
+			echo "$oldPid is not running"
+		fi
+	fi
+	OPENCHAIN_CHAINCODE_ID_NAME=$securityName nohup $fileName >$directoryName/$securityName.log 2>&1 &
 	pid=$!
+	echo $pid > $directoryName/$securityName.pid
+	echo "Started chaincode in dev mode with PID $pid"
 	deployMode="-n $securityName"
 else
 	deployMode="-p $chainCodePath"
@@ -89,14 +101,4 @@ else
 	echo $chainCodeAddress > $directoryName/$securityName
 fi
 
-# TBD I don't think we should kill this, since it provides the execution environment for the chaincode in Dev mode
-if [[ $devMode -eq 1 ]]; then
-	#kill the local chain code that we started earlier if it is still running
-	if [[ $pid -eq 0 ]] &&  ps -p $pid > /dev/null ;
-	then
-		kill $pid
-	fi
-fi
-
 echo "Chaincode $securityName has been compiled, registered and deployed!"
-
