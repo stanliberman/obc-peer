@@ -97,7 +97,7 @@ fi
 cd $GOPATH/src/github.com/hyperledger-incubator/obc-peer
 echo "Deploying contract $securityName with constructor init..."
 
-constructorJSON="{\"Function\":\"init\", \"Args\": [\"$chainCodeUser\", \"$securityName\"]}"
+constructorJSON="{\"Function\":\"\", \"Args\": [\"$chainCodeUser\", \"$securityName\"]}"
 echo "Constructor args: $constructorJSON"
 
 chainCodeAddress=`./obc-peer chaincode deploy -u $chainCodeUser $deployMode --ctor="$constructorJSON" 2>&1 >>$deployLogFile`

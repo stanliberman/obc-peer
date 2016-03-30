@@ -53,11 +53,6 @@ Args:
 	- asset ID
 */
 func (t *AssetManagerChaincode) Init(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	log.Info("This is constructor")
-	return t.init(stub, args)
-}
-
-func (t *AssetManagerChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var err error
 
 	log.Info("Initializing")
@@ -317,7 +312,7 @@ func (t *AssetManagerChaincode) Run(stub *shim.ChaincodeStub, function string, a
 
 	// Handle different functions
 	if function == "init" {
-		return t.init(stub, args)
+		return t.Init(stub, args)
 	} else if function == "admin" {
 		return t.admin(stub, args)
 	} else if function == "issue" {

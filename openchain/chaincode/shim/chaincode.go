@@ -49,7 +49,9 @@ var handler *Handler
 
 // Chaincode is the standard chaincode callback interface that the chaincode developer needs to implement.
 type Chaincode interface {
-	// Run method will be called during init and for every transaction
+	// Init method will be called only during deploy
+	Init(stub *ChaincodeStub, args []string) ([]byte, error)
+	// Run method will be called for every transaction
 	Run(stub *ChaincodeStub, function string, args []string) ([]byte, error)
 	// Query is to be used for read-only access to chaincode state
 	Query(stub *ChaincodeStub, function string, args []string) ([]byte, error)

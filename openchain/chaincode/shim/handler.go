@@ -224,7 +224,14 @@ func (handler *Handler) handleInit(msg *pb.ChaincodeMessage) {
 		// Create the ChaincodeStub which the chaincode can use to callback
 		stub := new(ChaincodeStub)
 		stub.UUID = msg.Uuid
-		res, err := handler.cc.Run(stub, input.Function, input.Args)
+		var res []byte
+		var err error
+		chaincodeLogger.Info("Init function is '%s'", input.Function)
+		if len(input.Function) > 0 {
+			res, err = handler.cc.Run(stub, input.Function, input.Args)
+		} else {
+			res, err = handler.cc.Init(stub, input.Args)
+		}
 
 		// delete isTransaction entry
 		handler.deleteIsTransaction(msg.Uuid)
